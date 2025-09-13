@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    char ip_str[INET_ADDRSTRLEN]; //Declara "string" que conterá 
+    char ip_str[INET_ADDRSTRLEN]; //Declara "string" que conterá o IP
     inet_ntop(AF_INET, &checkadr.sin_addr, ip_str, INET_ADDRSTRLEN); //converte o adr recuperado por getsockname ao formato de chars e guarda em ip_str 
     printf("local: %s, Porta: %d\n", ip_str, ntohs(checkadr.sin_port)); //exibe o ip e porta (convertida para int)
 
