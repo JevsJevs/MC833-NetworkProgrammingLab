@@ -11,6 +11,7 @@
 
 #define LISTENQ      10
 #define MAXDATASIZE  256
+#define MAXLINE      4096
 
 int main(void) {
     int listenfd, connfd;
@@ -79,6 +80,15 @@ int main(void) {
         time_t ticks = time(NULL); // ctime() já inclui '\n'
         snprintf(buf, sizeof(buf), "Hello from server!\nTime: %.24s\r\n", ctime(&ticks));
         (void)write(connfd, buf, strlen(buf));
+
+        // imprime a mensagem do cliente
+        char msg[MAXLINE + 1];
+        ssize_t n = read(connfd, msg, MAXLINE);
+        if (n > 0) {
+            msg[n] = 0;
+            printf("[CLI MSG] %s", msg);
+            fflush(stdout);
+        }
 
         close(connfd); // fecha só a conexão aceita; servidor segue escutando
     }
