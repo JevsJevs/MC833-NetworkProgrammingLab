@@ -28,7 +28,10 @@ int main(void) {
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family      = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); 
-    servaddr.sin_port        = htons(13);              
+    
+    // Escolhe porta aleatória entre 1 e 65535
+    srand(time(NULL));
+    servaddr.sin_port        = htons(rand() % 65535 + 1);              
 
     if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1) {
         perror("bind");
