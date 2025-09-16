@@ -87,6 +87,11 @@ int main(int argc, char **argv) {
         fflush(stdout);
     }
 
+    // lê uma linha do stdin e envia ao servidor
+    char buf[MAXLINE];
+    fgets(buf, MAXLINE, stdin);
+    write(sockfd, buf, MAXLINE);
+
     close(sockfd);
     return 0;
 }
