@@ -16,7 +16,7 @@
 
 int main(int argc, char **argv) {
     int    sockfd;
-    struct sockaddr_in servaddr;
+    struct sockaddr_in servaddr, checkadr;
 
     // IP/PORT (argumentos ou server.info)
     char ip[INET_ADDRSTRLEN] = "127.0.0.1";
@@ -63,6 +63,20 @@ int main(int argc, char **argv) {
         close(sockfd);
         return 1;
     }
+
+    //Mostra dados da conexao
+    memset(&checkadr, 0, sizeof(checkadr)); //Zera o conteudo do checkadr, que conterá o adr recuperado da conexão
+    socklen_t addr_len = sizeof(checkadr);
+    
+    if(getsockname(sockfd, (struct sockaddr *) &checkadr, &addr_len) < 0) {
+        printf("getsocket info fail");
+        close(sockfd);
+        return 1;
+    }
+
+    char ip_str[INET_ADDRSTRLEN]; //Declara "string" que conterá o IP
+    inet_ntop(AF_INET, &checkadr.sin_addr, ip_str, INET_ADDRSTRLEN); //converte o adr recuperado por getsockname ao formato de chars e guarda em ip_str 
+    printf("local: %s, Porta: %d\n", ip_str, ntohs(checkadr.sin_port)); //exibe o ip e porta (convertida para int)
 
     // lê e imprime o banner (uma leitura basta neste cenário)
     char banner[MAXLINE + 1];

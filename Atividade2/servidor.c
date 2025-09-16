@@ -14,7 +14,9 @@
 
 int main(void) {
     int listenfd, connfd;
-    struct sockaddr_in servaddr;
+    struct sockaddr_in servaddr, checkadr;
+    memset(&checkadr, 0, sizeof(checkadr)); //variaveis para checagem de adr de connexão
+    socklen_t addr_len = sizeof(checkadr);
 
     // socket
     if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -49,7 +51,8 @@ int main(void) {
         close(listenfd);
         return 1;
     }
-
+    
+    
     // laço: aceita clientes, envia banner e fecha a conexão do cliente
     for (;;) {
         connfd = accept(listenfd, NULL, NULL);
@@ -57,6 +60,16 @@ int main(void) {
             perror("accept");
             continue; // segue escutando
         }
+        
+        if(getpeername(connfd, (struct sockaddr *) &checkadr, &addr_len) < 0) {
+            printf("getsocket infor fail");
+            return 1;
+        }
+
+        char ip_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &checkadr.sin_addr, ip_str, INET_ADDRSTRLEN); //converte o adr recuperado por getsockname ao formato de chars e guarda em ip_str 
+        printf("remote: %s, Porta: %d\n", ip_str, ntohs(checkadr.sin_port));//exibe o ip e porta (convertida para int)
+        
 
         // envia banner "Hello + Time"
         char buf[MAXDATASIZE];
