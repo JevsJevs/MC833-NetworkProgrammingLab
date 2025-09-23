@@ -41,10 +41,42 @@ int Listen(int listenfd, int queueSize){
     
 }
 int Accept(){}
-int Fork(){}
-int Close(){}
-int Read(){}
-int Write(){}
+
+int Fork(){
+    pid_t pid = fork();
+    if (pid == -1){
+        perror("fork");
+        exit(1);
+    }
+    return pid;
+}
+
+void Close(int fd){
+    if (close(fd) == -1){
+        perror("close");
+        exit(1);
+    }
+}
+
+int Read(int fd, const void *buf, size_t n){
+    ssize_t ret = read(fd, buf, n);
+    if (ret == -1){
+        perror("read");
+        close(fd);
+        exit(1);
+    }
+    return ret;
+}
+
+int Write(int fd, const void *buf, size_t n){
+    ssize_t ret = write(fd, buf, n);
+    if (ret == -1){
+        perror("write");
+        close(fd);
+        exit(1);
+    }
+    return ret;
+}
 
 
 
