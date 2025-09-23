@@ -13,6 +13,41 @@
 #define MAXDATASIZE  256
 #define MAXLINE      4096
 
+//=============================================================================================
+//=============================WRAPPERS========================================================
+int Socket(int domain, int type, int protocol){
+    int listenfd;
+    if ((listenfd = socket(domain, type, protocol)) < -1) {
+        perror("socket");
+        exit(1);
+    }
+
+    return listenfd;
+}
+
+void Bind(int listenfd, struct sockaddr* adrptr, int adrSize){
+    if (bind(listenfd, (struct sockaddr *)&adrptr, adrSize) == -1) {
+        perror("bind");
+        close(listenfd);
+        exit(1);
+    }
+}
+int Listen(int listenfd, int queueSize){
+    if (listen(listenfd, queueSize) == -1) {
+        perror("listen");
+        close(listenfd);
+        return 1;
+    }
+    
+}
+int Accept(){}
+int Fork(){}
+int Close(){}
+int Read(){}
+int Write(){}
+
+
+
 int main(void) {
     int listenfd, connfd;
     struct sockaddr_in servaddr, checkadr;
@@ -20,10 +55,12 @@ int main(void) {
     socklen_t addr_len = sizeof(checkadr);
 
     // socket
-    if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("socket");
-        return 1;
-    }
+    // if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    //     perror("socket");
+    //     return 1;
+    // }
+
+    listenfd = Socket(AF_INET, SOCK_STREAM, 0);
 
     
     memset(&servaddr, 0, sizeof(servaddr));
@@ -34,11 +71,12 @@ int main(void) {
     srand(time(NULL));
     servaddr.sin_port        = htons(rand() % 65535 + 1);              
 
-    if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1) {
-        perror("bind");
-        close(listenfd);
-        return 1;
-    }
+    // if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1) {
+    //     perror("bind");
+    //     close(listenfd);
+    //     return 1;
+    // }
+    Bind(listenfd, &servaddr, sizeof(servaddr));
     // Descobrir porta real e divulgar em arquivo server.info
     struct sockaddr_in bound; socklen_t blen = sizeof(bound);
     if (getsockname(listenfd, (struct sockaddr*)&bound, &blen) == 0) {
@@ -50,11 +88,12 @@ int main(void) {
     }
 
     // listen
-    if (listen(listenfd, LISTENQ) == -1) {
-        perror("listen");
-        close(listenfd);
-        return 1;
-    }
+    // if (listen(listenfd, LISTENQ) == -1) {
+    //     perror("listen");
+    //     close(listenfd);
+    //     return 1;
+    // }
+    Listen(listenfd, LISTENQ);
     
     
     // laço: aceita clientes, envia banner e fecha a conexão do cliente
@@ -90,6 +129,8 @@ int main(void) {
             fflush(stdout);
         }
 
+
+        sleep(2000);
         close(connfd); // fecha só a conexão aceita; servidor segue escutando
     }
 
