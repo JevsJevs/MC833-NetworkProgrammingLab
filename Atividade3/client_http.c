@@ -17,6 +17,7 @@
 int main(int argc, char **argv) {
     int    sockfd;
     struct sockaddr_in servaddr, checkadr;
+    void *ret;
 
     // IP/PORT (argumentos ou server.info)
     char ip[INET_ADDRSTRLEN] = "127.0.0.1";
@@ -29,7 +30,7 @@ int main(int argc, char **argv) {
         FILE *f = fopen("server.info", "r");
         if (f) {
             char line[128]; int got_p = 0;
-            while (fgets(line, sizeof(line), f)) {
+            while ((ret = (void*)fgets(line, sizeof(line), f))) {
                 (void)sscanf(line, "IP=%127s", ip);        // lê IP se houver, sem flag
                 if (sscanf(line, "PORT=%hu", &port) == 1) got_p = 1;
             }
@@ -89,8 +90,8 @@ int main(int argc, char **argv) {
 
     // lê uma linha do stdin e envia ao servidor
     char buf[MAXLINE];
-    fgets(buf, MAXLINE, stdin);
-    write(sockfd, buf, MAXLINE);
+    ret = (void*)fgets(buf, MAXLINE, stdin);
+    ret = (void*)write(sockfd, buf, MAXLINE);
 
     close(sockfd);
     return 0;

@@ -21,26 +21,37 @@ int Socket(int domain, int type, int protocol){
         perror("socket");
         exit(1);
     }
-
     return listenfd;
 }
 
-void Bind(int listenfd, struct sockaddr* adrptr, int adrSize){
-    if (bind(listenfd, (struct sockaddr *)&adrptr, adrSize) == -1) {
+int Bind(int listenfd, struct sockaddr* adrptr, int adrSize){
+    int ret = bind(listenfd, (struct sockaddr *)adrptr, adrSize);
+    if (ret == -1) {
         perror("bind");
         close(listenfd);
         exit(1);
     }
+    return ret;
 }
 int Listen(int listenfd, int queueSize){
-    if (listen(listenfd, queueSize) == -1) {
+    int ret = listen(listenfd, queueSize);
+    if (ret == -1) {
         perror("listen");
         close(listenfd);
         return 1;
     }
+    return ret;
     
 }
-int Accept(){}
+
+int Accept(int fd, struct sockaddr * addr, socklen_t * addr_len){
+    int connfd = accept(fd, (struct sockaddr*)&addr, addr_len);
+    if (connfd == -1) {
+        perror("accept");
+        exit(1);
+    }
+    return connfd;
+}
 
 int Fork(){
     pid_t pid = fork();
@@ -51,29 +62,31 @@ int Fork(){
     return pid;
 }
 
-void Close(int fd){
-    if (close(fd) == -1){
-        perror("close");
-        exit(1);
-    }
-}
-
-int Read(int fd, const void *buf, size_t n){
-    ssize_t ret = read(fd, buf, n);
+int Close(int fd){
+    int ret = close(fd);
     if (ret == -1){
-        perror("read");
-        close(fd);
+        perror("close");
         exit(1);
     }
     return ret;
 }
 
-int Write(int fd, const void *buf, size_t n){
+ssize_t Read(int fd, void *buf, size_t n){
+    ssize_t ret = read(fd, buf, n);
+    if (ret == -1){
+        perror("read");
+        close(fd);
+        return -1;
+    }
+    return ret;
+}
+
+ssize_t Write(int fd, void *buf, size_t n){
     ssize_t ret = write(fd, buf, n);
     if (ret == -1){
         perror("write");
         close(fd);
-        exit(1);
+        return -1;
     }
     return ret;
 }
@@ -108,7 +121,7 @@ int main(void) {
     //     close(listenfd);
     //     return 1;
     // }
-    Bind(listenfd, &servaddr, sizeof(servaddr));
+    Bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr));
     // Descobrir porta real e divulgar em arquivo server.info
     struct sockaddr_in bound; socklen_t blen = sizeof(bound);
     if (getsockname(listenfd, (struct sockaddr*)&bound, &blen) == 0) {
@@ -150,7 +163,9 @@ int main(void) {
         char buf[MAXDATASIZE];
         time_t ticks = time(NULL); // ctime() já inclui '\n'
         snprintf(buf, sizeof(buf), "Hello from server!\nTime: %.24s\r\n", ctime(&ticks));
-        (void)write(connfd, buf, strlen(buf));
+        if (Write(connfd, buf, strlen(buf)) == -1){
+            exit(1);
+        }
 
         // imprime a mensagem do cliente
         char msg[MAXLINE + 1];
