@@ -12,8 +12,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define LISTENQ      10
+#define MAXDATASIZE  256
 #define MAXLINE 4096
-
 //=============================================================================================
 //=============================WRAPPERS========================================================
 int Socket(int domain, int type, int protocol){
@@ -169,6 +170,11 @@ int main(int argc, char **argv) {
     //Mostra dados da conexao
     memset(&checkadr, 0, sizeof(checkadr)); //Zera o conteudo do checkadr, que conterá o adr recuperado da conexão
     socklen_t addr_len = sizeof(checkadr);
+
+    // envia banner "Hello + Time"
+    char buf[MAXDATASIZE];
+    snprintf(buf, sizeof(buf), "GET / HTTP/1.1");
+    Write(sockfd, buf, strlen(buf));
     
     GetSockName(sockfd, &checkadr, addr_len);
 

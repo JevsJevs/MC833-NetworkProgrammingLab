@@ -10,7 +10,7 @@
 #include <errno.h>
 
 #define LISTENQ      10
-#define MAXDATASIZE  256
+#define MAXDATASIZE  512
 #define MAXLINE      4096
 
 //=============================================================================================
@@ -141,26 +141,56 @@ int main(void) {
     // laço: aceita clientes, envia banner e fecha a conexão do cliente
     for (;;) {
         // Aceita conexões de forma concorrente criando processos filhos
-        (void) Fork();
-
         connfd = Accept(listenfd, NULL, NULL);
         
         GetPeerName(connfd, (struct sockaddr *) &checkadr, sizeof(checkadr));
-
+        
         char ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &checkadr.sin_addr, ip_str, INET_ADDRSTRLEN); //converte o adr recuperado por getsockname ao formato de chars e guarda em ip_str 
         printf("remote: %s, Porta: %d\n", ip_str, ntohs(checkadr.sin_port));//exibe o ip e porta (convertida para int)
         
+        int pid = Fork();
 
-        // envia banner "Hello + Time"
-        char buf[MAXDATASIZE];
-        time_t ticks = time(NULL); // ctime() já inclui '\n'
-        snprintf(buf, sizeof(buf), "Hello from server!\nTime: %.24s\r\n", ctime(&ticks));
-        Write(connfd, buf, strlen(buf));
+        if(pid == 0){
 
-        sleep(5);
-        Close(connfd); // fecha só a conexão aceita; servidor segue escutando
+            // //Le Request do cliente
+            char buf[MAXDATASIZE];
+            Read(connfd, buf, strlen(buf));
+            
+            char header[15];
+            memcpy(header, buf, 14);
+            header[14] = '\0';
+
+            printf("Lido do client: %s", header);
+            if((strcmp(header, "GET / HTTP/1.0")  == 0) || (strcmp(header, "GET / HTTP/1.1")  == 0)){
+            // envia banner "Hello + Time"
+            snprintf(buf, sizeof(buf), "HTTP/1.0 200 OK\r\n\
+                                        Content-Type: text/html\r\n\
+                                        Content-Length: 91\r\n\
+                                        Connection: close\r\n\
+                                        \r\n<html><head><title>MC833</title</head><body><h1>MC833 TCP\
+                                        Concorrente </h1></body></html>");
+                                        Write(connfd, buf, strlen(buf));
+            }
+            else {
+                snprintf(buf, sizeof(buf), "400: Bad Request");
+                Write(connfd, buf, strlen(buf));
+            }
+            
+            // // envia banner "Hello + Time"
+            // char buf[MAXDATASIZE];
+            // time_t ticks = time(NULL); // ctime() já inclui '\n'
+            // snprintf(buf, sizeof(buf), "Hello from server!\nTime: %.24s\r\n", ctime(&ticks));
+            // Write(connfd, buf, strlen(buf));
+            
+            // sleep(5);
+            Close(connfd); // fecha só a conexão aceita; servidor segue escutando
+            exit(0);
+        }
+        // if(pid == 0)
+        //     break;
     }
 
     return 0;
 }
+//./client_http localhost 0 
