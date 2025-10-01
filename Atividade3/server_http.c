@@ -33,6 +33,7 @@ int Bind(int listenfd, struct sockaddr* adrptr, int adrSize){
     }
     return ret;
 }
+
 int Listen(int listenfd, int queueSize){
     int ret = listen(listenfd, queueSize);
     if (ret == -1) {
@@ -41,11 +42,10 @@ int Listen(int listenfd, int queueSize){
         return 1;
     }
     return ret;
-    
 }
 
 int Accept(int fd, struct sockaddr * addr, socklen_t * addr_len){
-    int connfd = accept(fd, (struct sockaddr*)&addr, addr_len);
+    int connfd = accept(fd, (struct sockaddr*)addr, addr_len);
     if (connfd == -1) {
         perror("accept");
         exit(1);
@@ -99,14 +99,7 @@ int main(void) {
     memset(&checkadr, 0, sizeof(checkadr)); //variaveis para checagem de adr de connexão
     socklen_t addr_len = sizeof(checkadr);
 
-    // socket
-    // if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-    //     perror("socket");
-    //     return 1;
-    // }
-
     listenfd = Socket(AF_INET, SOCK_STREAM, 0);
-
     
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family      = AF_INET;
@@ -116,12 +109,8 @@ int main(void) {
     srand(time(NULL));
     servaddr.sin_port        = htons(rand() % 65535 + 1);              
 
-    // if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1) {
-    //     perror("bind");
-    //     close(listenfd);
-    //     return 1;
-    // }
     Bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr));
+    
     // Descobrir porta real e divulgar em arquivo server.info
     struct sockaddr_in bound; socklen_t blen = sizeof(bound);
     if (getsockname(listenfd, (struct sockaddr*)&bound, &blen) == 0) {
@@ -132,18 +121,11 @@ int main(void) {
         fflush(stdout);
     }
 
-    // listen
-    // if (listen(listenfd, LISTENQ) == -1) {
-    //     perror("listen");
-    //     close(listenfd);
-    //     return 1;
-    // }
     Listen(listenfd, LISTENQ);
-    
     
     // laço: aceita clientes, envia banner e fecha a conexão do cliente
     for (;;) {
-        connfd = accept(listenfd, NULL, NULL);
+        connfd = Accept(listenfd, NULL, NULL);
         if (connfd == -1) {
             perror("accept");
             continue; // segue escutando
@@ -163,22 +145,10 @@ int main(void) {
         char buf[MAXDATASIZE];
         time_t ticks = time(NULL); // ctime() já inclui '\n'
         snprintf(buf, sizeof(buf), "Hello from server!\nTime: %.24s\r\n", ctime(&ticks));
-        if (Write(connfd, buf, strlen(buf)) == -1){
-            exit(1);
-        }
+        Write(connfd, buf, strlen(buf));
 
-        // imprime a mensagem do cliente
-        char msg[MAXLINE + 1];
-        ssize_t n = read(connfd, msg, MAXLINE);
-        if (n > 0) {
-            msg[n] = 0;
-            printf("[CLI MSG] %s", msg);
-            fflush(stdout);
-        }
-
-
-        sleep(2000);
-        close(connfd); // fecha só a conexão aceita; servidor segue escutando
+        sleep(5);
+        Close(connfd); // fecha só a conexão aceita; servidor segue escutando
     }
 
     return 0;

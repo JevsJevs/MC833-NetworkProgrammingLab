@@ -14,6 +14,94 @@
 
 #define MAXLINE 4096
 
+//=============================================================================================
+//=============================WRAPPERS========================================================
+int Socket(int domain, int type, int protocol){
+    int listenfd;
+    if ((listenfd = socket(domain, type, protocol)) < -1) {
+        perror("socket");
+        exit(1);
+    }
+    return listenfd;
+}
+
+int Bind(int listenfd, struct sockaddr* adrptr, int adrSize){
+    int ret = bind(listenfd, (struct sockaddr *)adrptr, adrSize);
+    if (ret == -1) {
+        perror("bind");
+        close(listenfd);
+        exit(1);
+    }
+    return ret;
+}
+
+int Listen(int listenfd, int queueSize){
+    int ret = listen(listenfd, queueSize);
+    if (ret == -1) {
+        perror("listen");
+        close(listenfd);
+        return 1;
+    }
+    return ret;
+}
+
+int Accept(int fd, struct sockaddr * addr, socklen_t * addr_len){
+    int connfd = accept(fd, (struct sockaddr*)addr, addr_len);
+    if (connfd == -1) {
+        perror("accept");
+        exit(1);
+    }
+    return connfd;
+}
+
+int Fork(){
+    pid_t pid = fork();
+    if (pid == -1){
+        perror("fork");
+        exit(1);
+    }
+    return pid;
+}
+
+int Close(int fd){
+    int ret = close(fd);
+    if (ret == -1){
+        perror("close");
+        exit(1);
+    }
+    return ret;
+}
+
+ssize_t Read(int fd, void *buf, size_t n){
+    ssize_t ret = read(fd, buf, n);
+    if (ret == -1){
+        perror("read");
+        close(fd);
+        return -1;
+    }
+    return ret;
+}
+
+ssize_t Write(int fd, void *buf, size_t n){
+    ssize_t ret = write(fd, buf, n);
+    if (ret == -1){
+        perror("write");
+        close(fd);
+        return -1;
+    }
+    return ret;
+}
+
+int Connect(int fd, void *servaddr, size_t n){
+    int ret = connect(fd, (struct sockaddr *)servaddr, n);
+    if (ret < 0) {
+        perror("connect error");
+        close(fd);
+        return 1;
+    }
+    return ret;
+}
+
 int main(int argc, char **argv) {
     int    sockfd;
     struct sockaddr_in servaddr, checkadr;
@@ -45,10 +133,7 @@ int main(int argc, char **argv) {
     }
 
     // socket
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("socket error");
-        return 1;
-    }
+    sockfd = Socket(AF_INET, SOCK_STREAM, 0);
 
     // connect
     memset(&servaddr, 0, sizeof(servaddr));
@@ -56,14 +141,10 @@ int main(int argc, char **argv) {
     servaddr.sin_port   = htons(port);
     if (inet_pton(AF_INET, ip, &servaddr.sin_addr) <= 0) {
         perror("inet_pton error");
-        close(sockfd);
+        Close(sockfd);
         return 1;
     }
-    if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-        perror("connect error");
-        close(sockfd);
-        return 1;
-    }
+    Connect(sockfd, &servaddr, sizeof(servaddr));
 
     //Mostra dados da conexao
     memset(&checkadr, 0, sizeof(checkadr)); //Zera o conteudo do checkadr, que conterá o adr recuperado da conexão
@@ -71,7 +152,7 @@ int main(int argc, char **argv) {
     
     if(getsockname(sockfd, (struct sockaddr *) &checkadr, &addr_len) < 0) {
         printf("getsocket info fail");
-        close(sockfd);
+        Close(sockfd);
         return 1;
     }
 
@@ -81,18 +162,13 @@ int main(int argc, char **argv) {
 
     // lê e imprime o banner (uma leitura basta neste cenário)
     char banner[MAXLINE + 1];
-    ssize_t n = read(sockfd, banner, MAXLINE);
+    ssize_t n = Read(sockfd, banner, MAXLINE);
     if (n > 0) {
         banner[n] = 0;
         fputs(banner, stdout);
         fflush(stdout);
     }
 
-    // lê uma linha do stdin e envia ao servidor
-    char buf[MAXLINE];
-    ret = (void*)fgets(buf, MAXLINE, stdin);
-    ret = (void*)write(sockfd, buf, MAXLINE);
-
-    close(sockfd);
+    Close(sockfd);
     return 0;
 }
