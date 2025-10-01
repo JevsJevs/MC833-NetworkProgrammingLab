@@ -91,26 +91,23 @@ ssize_t Write(int fd, void *buf, size_t n){
     return ret;
 }
 
-void GetSockName(int listenfd, struct sockaddr_in* bound, socklen_t boundSize){
-    if (getsockname(listenfd, (struct sockaddr*) bound, &boundSize) != 0) {
+int GetSockName(int listenfd, struct sockaddr_in* bound, socklen_t boundSize){
+    int ret = getsockname(listenfd, (struct sockaddr*) bound, &boundSize);
+    if (ret != 0) {
         printf(" Error");
-        
-        return;
+        return -1;
     }
-
-    unsigned short p = ntohs(bound->sin_port);
-    printf("[SERVIDOR] Escutando em 127.0.0.1:%u\n", p);
-    FILE *f = fopen("server.info", "w");
-    if (f) { fprintf(f, "IP=127.0.0.1\nPORT=%u\n", p); fclose(f); }
-    fflush(stdout);
+    return ret;
 }
 
-void GetPeerName(int fd, struct sockaddr *addr, socklen_t len){
-    if (getpeername(fd, (struct sockaddr *) addr, &len) < 0)
+int GetPeerName(int fd, struct sockaddr *addr, socklen_t len){
+    int ret = getpeername(fd, (struct sockaddr *) addr, &len);
+    if (ret < 0)
     {
         perror("getpeername");
         exit(1);
     }
+    return ret;
 }
 
 int main(void) {
@@ -130,17 +127,23 @@ int main(void) {
 
     Bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr));
     // Descobrir porta real e divulgar em arquivo server.info
-    struct sockaddr_in bound;
-    GetSockName(listenfd, &bound, sizeof(bound));
-
+    struct sockaddr_in bound; socklen_t blen = sizeof(bound);
+    if (GetSockName(listenfd, &bound, blen) == 0){
+        unsigned short p = ntohs(bound.sin_port);
+        printf("[SERVIDOR] Escutando em 127.0.0.1:%u\n", p);
+        FILE *f = fopen("server.info", "w");
+        if (f) { fprintf(f, "IP=127.0.0.1\nPORT=%u\n", p); fclose(f); }
+        fflush(stdout);
+    }
+    
     Listen(listenfd, LISTENQ);
     
     // laço: aceita clientes, envia banner e fecha a conexão do cliente
     for (;;) {
         connfd = Accept(listenfd, NULL, NULL);
         
-        GetPeerName(connfd, (struct sockaddr*) &checkadr, sizeof(checkadr));
-        
+        GetPeerName(connfd, (struct sockaddr *) &checkadr, sizeof(checkadr));
+
         char ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &checkadr.sin_addr, ip_str, INET_ADDRSTRLEN); //converte o adr recuperado por getsockname ao formato de chars e guarda em ip_str 
         printf("remote: %s, Porta: %d\n", ip_str, ntohs(checkadr.sin_port));//exibe o ip e porta (convertida para int)

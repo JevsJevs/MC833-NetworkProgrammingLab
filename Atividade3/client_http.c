@@ -102,6 +102,26 @@ int Connect(int fd, void *servaddr, size_t n){
     return ret;
 }
 
+int GetSockName(int listenfd, struct sockaddr_in* bound, socklen_t boundSize){
+    int ret = getsockname(listenfd, (struct sockaddr*) bound, &boundSize);
+    if (ret != 0) {
+        printf(" Error");
+        return -1;
+    }
+    return ret;
+}
+
+int GetPeerName(int fd, struct sockaddr *addr, socklen_t len){
+    int ret = getpeername(fd, (struct sockaddr *) addr, &len);
+    if (ret < 0){
+        perror("getpeername");
+        exit(1);
+    }
+    return ret;
+}
+
+
+
 int main(int argc, char **argv) {
     int    sockfd;
     struct sockaddr_in servaddr, checkadr;
@@ -150,11 +170,7 @@ int main(int argc, char **argv) {
     memset(&checkadr, 0, sizeof(checkadr)); //Zera o conteudo do checkadr, que conterá o adr recuperado da conexão
     socklen_t addr_len = sizeof(checkadr);
     
-    if(getsockname(sockfd, (struct sockaddr *) &checkadr, &addr_len) < 0) {
-        printf("getsocket info fail");
-        Close(sockfd);
-        return 1;
-    }
+    GetSockName(sockfd, &checkadr, addr_len);
 
     char ip_str[INET_ADDRSTRLEN]; //Declara "string" que conterá o IP
     inet_ntop(AF_INET, &checkadr.sin_addr, ip_str, INET_ADDRSTRLEN); //converte o adr recuperado por getsockname ao formato de chars e guarda em ip_str 
@@ -168,7 +184,7 @@ int main(int argc, char **argv) {
         fputs(banner, stdout);
         fflush(stdout);
     }
-
+    sleep(5);
     Close(sockfd);
     return 0;
 }
