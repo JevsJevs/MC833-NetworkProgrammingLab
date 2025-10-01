@@ -140,6 +140,9 @@ int main(void) {
     
     // laço: aceita clientes, envia banner e fecha a conexão do cliente
     for (;;) {
+        // Aceita conexões de forma concorrente criando processos filhos
+        (void) Fork();
+
         connfd = Accept(listenfd, NULL, NULL);
         
         GetPeerName(connfd, (struct sockaddr *) &checkadr, sizeof(checkadr));
@@ -148,7 +151,6 @@ int main(void) {
         inet_ntop(AF_INET, &checkadr.sin_addr, ip_str, INET_ADDRSTRLEN); //converte o adr recuperado por getsockname ao formato de chars e guarda em ip_str 
         printf("remote: %s, Porta: %d\n", ip_str, ntohs(checkadr.sin_port));//exibe o ip e porta (convertida para int)
         
-        (void) Fork();
 
         // envia banner "Hello + Time"
         char buf[MAXDATASIZE];
