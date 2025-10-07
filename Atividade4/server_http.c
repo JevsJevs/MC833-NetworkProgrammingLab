@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#define LISTENQ      10
 #define MAXDATASIZE  512
 #define MAXLINE      4096
 
@@ -110,20 +109,35 @@ int GetPeerName(int fd, struct sockaddr *addr, socklen_t len){
     return ret;
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+
+    if(argc != 4){
+        perror("Existem argumentos faltando");
+        exit(1);
+    }
+
+    //Lê parametros do programa
+    int porta = atoi(argv[1]);
+    int backlog = atoi(argv[2]);
+    int tempoSleep = atoi(argv[3]);
+
     int listenfd, connfd;
     struct sockaddr_in servaddr, checkadr;
     memset(&checkadr, 0, sizeof(checkadr)); //variaveis para checagem de adr de connexão
 
     listenfd = Socket(AF_INET, SOCK_STREAM, 0);
 
-    memset(&servaddr, 0, sizeof(servaddr));
+    memset(&servaddr, 0, sizeof(servaddr)); // Remove lixo armazenado na memoria no momento da alocação
     servaddr.sin_family      = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); 
     
-    // Escolhe porta aleatória entre 1 e 65535
-    srand(time(NULL));
-    servaddr.sin_port        = htons(rand() % 65535 + 1);              
+    // Escolhe porta aleatória entre 1 e 65535 caso o parametro 'porta' for 0, senão a porta de conexão é a definida no argumento
+    if(porta == 0){        
+        srand(time(NULL));
+        servaddr.sin_port = htons(rand() % 65535 + 1);              
+    }
+    else
+        servaddr.sin_port = htons(porta);
 
     Bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr));
     // Descobrir porta real e divulgar em arquivo server.info
@@ -136,7 +150,7 @@ int main(void) {
         fflush(stdout);
     }
     
-    Listen(listenfd, LISTENQ);
+    Listen(listenfd, backlog);
     
     // laço: aceita clientes, envia banner e fecha a conexão do cliente
     for (;;) {
@@ -152,7 +166,7 @@ int main(void) {
         int pid = Fork();
 
         if(pid == 0){
-
+            Close(listenfd); //Fecha listener pois no processo filho não é necessário
             // Lê Request do cliente
             char buf[MAXDATASIZE];
             Read(connfd, buf, MAXDATASIZE);
@@ -161,10 +175,12 @@ int main(void) {
             memcpy(header, buf, 14);
             header[14] = '\0';
 
-            printf("Lido do client: %s\n", header);
+            printf("Lido do client: %s\n", header); //Exibe mensagem recebida do cliente
+
+            //Testa a mensagem recebida comparando-a com o esperado
             if((strcmp(header, "GET / HTTP/1.0")  == 0) || (strcmp(header, "GET / HTTP/1.1")  == 0)){
-            // envia banner "Hello + Time"
-            snprintf(buf, sizeof(buf), "HTTP/1.0 200 OK\r\n\
+                // envia banner "Hello + Time"
+                snprintf(buf, sizeof(buf), "HTTP/1.0 200 OK\r\n\
                                         Content-Type: text/html\r\n\
                                         Content-Length: 91\r\n\
                                         Connection: close\r\n\
@@ -177,18 +193,11 @@ int main(void) {
                 Write(connfd, buf, strlen(buf));
             }
             
-            // // envia banner "Hello + Time"
-            // char buf[MAXDATASIZE];
-            // time_t ticks = time(NULL); // ctime() já inclui '\n'
-            // snprintf(buf, sizeof(buf), "Hello from server!\nTime: %.24s\r\n", ctime(&ticks));
-            // Write(connfd, buf, strlen(buf));
-            
-            // sleep(5);
+            sleep(tempoSleep);
             Close(connfd); // fecha só a conexão aceita; servidor segue escutando
             exit(0);
         }
-        // if(pid == 0)
-        //     break;
+        Close(connfd);
     }
 
     return 0;
