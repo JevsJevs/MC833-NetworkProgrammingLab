@@ -153,15 +153,15 @@ int main(void) {
 
         if(pid == 0){
 
-            // //Le Request do cliente
+            // Lê Request do cliente
             char buf[MAXDATASIZE];
-            Read(connfd, buf, strlen(buf));
+            Read(connfd, buf, MAXDATASIZE);
             
             char header[15];
             memcpy(header, buf, 14);
             header[14] = '\0';
 
-            printf("Lido do client: %s", header);
+            printf("Lido do client: %s\n", header);
             if((strcmp(header, "GET / HTTP/1.0")  == 0) || (strcmp(header, "GET / HTTP/1.1")  == 0)){
             // envia banner "Hello + Time"
             snprintf(buf, sizeof(buf), "HTTP/1.0 200 OK\r\n\

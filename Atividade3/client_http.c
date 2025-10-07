@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
         fputs(banner, stdout);
         fflush(stdout);
     }
-    sleep(5);
+
     Close(sockfd);
     return 0;
 }
