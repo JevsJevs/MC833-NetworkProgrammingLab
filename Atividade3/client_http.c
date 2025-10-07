@@ -12,11 +12,121 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define LISTENQ      10
+#define MAXDATASIZE  256
 #define MAXLINE 4096
+//=============================================================================================
+//=============================WRAPPERS========================================================
+int Socket(int domain, int type, int protocol){
+    int listenfd;
+    if ((listenfd = socket(domain, type, protocol)) < -1) {
+        perror("socket");
+        exit(1);
+    }
+    return listenfd;
+}
+
+int Bind(int listenfd, struct sockaddr* adrptr, int adrSize){
+    int ret = bind(listenfd, (struct sockaddr *)adrptr, adrSize);
+    if (ret == -1) {
+        perror("bind");
+        close(listenfd);
+        exit(1);
+    }
+    return ret;
+}
+
+int Listen(int listenfd, int queueSize){
+    int ret = listen(listenfd, queueSize);
+    if (ret == -1) {
+        perror("listen");
+        close(listenfd);
+        return 1;
+    }
+    return ret;
+}
+
+int Accept(int fd, struct sockaddr * addr, socklen_t * addr_len){
+    int connfd = accept(fd, (struct sockaddr*)addr, addr_len);
+    if (connfd == -1) {
+        perror("accept");
+        exit(1);
+    }
+    return connfd;
+}
+
+int Fork(){
+    pid_t pid = fork();
+    if (pid == -1){
+        perror("fork");
+        exit(1);
+    }
+    return pid;
+}
+
+int Close(int fd){
+    int ret = close(fd);
+    if (ret == -1){
+        perror("close");
+        exit(1);
+    }
+    return ret;
+}
+
+ssize_t Read(int fd, void *buf, size_t n){
+    ssize_t ret = read(fd, buf, n);
+    if (ret == -1){
+        perror("read");
+        close(fd);
+        return -1;
+    }
+    return ret;
+}
+
+ssize_t Write(int fd, void *buf, size_t n){
+    ssize_t ret = write(fd, buf, n);
+    if (ret == -1){
+        perror("write");
+        close(fd);
+        return -1;
+    }
+    return ret;
+}
+
+int Connect(int fd, void *servaddr, size_t n){
+    int ret = connect(fd, (struct sockaddr *)servaddr, n);
+    if (ret < 0) {
+        perror("connect error");
+        close(fd);
+        return 1;
+    }
+    return ret;
+}
+
+int GetSockName(int listenfd, struct sockaddr_in* bound, socklen_t boundSize){
+    int ret = getsockname(listenfd, (struct sockaddr*) bound, &boundSize);
+    if (ret != 0) {
+        printf(" Error");
+        return -1;
+    }
+    return ret;
+}
+
+int GetPeerName(int fd, struct sockaddr *addr, socklen_t len){
+    int ret = getpeername(fd, (struct sockaddr *) addr, &len);
+    if (ret < 0){
+        perror("getpeername");
+        exit(1);
+    }
+    return ret;
+}
+
+
 
 int main(int argc, char **argv) {
     int    sockfd;
     struct sockaddr_in servaddr, checkadr;
+    void *ret;
 
     // IP/PORT (argumentos ou server.info)
     char ip[INET_ADDRSTRLEN] = "127.0.0.1";
@@ -29,7 +139,7 @@ int main(int argc, char **argv) {
         FILE *f = fopen("server.info", "r");
         if (f) {
             char line[128]; int got_p = 0;
-            while (fgets(line, sizeof(line), f)) {
+            while ((ret = (void*)fgets(line, sizeof(line), f))) {
                 (void)sscanf(line, "IP=%127s", ip);        // lê IP se houver, sem flag
                 if (sscanf(line, "PORT=%hu", &port) == 1) got_p = 1;
             }
@@ -44,10 +154,7 @@ int main(int argc, char **argv) {
     }
 
     // socket
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("socket error");
-        return 1;
-    }
+    sockfd = Socket(AF_INET, SOCK_STREAM, 0);
 
     // connect
     memset(&servaddr, 0, sizeof(servaddr));
@@ -55,24 +162,21 @@ int main(int argc, char **argv) {
     servaddr.sin_port   = htons(port);
     if (inet_pton(AF_INET, ip, &servaddr.sin_addr) <= 0) {
         perror("inet_pton error");
-        close(sockfd);
+        Close(sockfd);
         return 1;
     }
-    if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-        perror("connect error");
-        close(sockfd);
-        return 1;
-    }
+    Connect(sockfd, &servaddr, sizeof(servaddr));
 
     //Mostra dados da conexao
     memset(&checkadr, 0, sizeof(checkadr)); //Zera o conteudo do checkadr, que conterá o adr recuperado da conexão
     socklen_t addr_len = sizeof(checkadr);
+
+    // envia banner "Hello + Time"
+    char buf[MAXDATASIZE];
+    snprintf(buf, sizeof(buf), "GET / HTTP/1.1");
+    Write(sockfd, buf, strlen(buf));
     
-    if(getsockname(sockfd, (struct sockaddr *) &checkadr, &addr_len) < 0) {
-        printf("getsocket info fail");
-        close(sockfd);
-        return 1;
-    }
+    GetSockName(sockfd, &checkadr, addr_len);
 
     char ip_str[INET_ADDRSTRLEN]; //Declara "string" que conterá o IP
     inet_ntop(AF_INET, &checkadr.sin_addr, ip_str, INET_ADDRSTRLEN); //converte o adr recuperado por getsockname ao formato de chars e guarda em ip_str 
@@ -80,18 +184,13 @@ int main(int argc, char **argv) {
 
     // lê e imprime o banner (uma leitura basta neste cenário)
     char banner[MAXLINE + 1];
-    ssize_t n = read(sockfd, banner, MAXLINE);
+    ssize_t n = Read(sockfd, banner, MAXLINE);
     if (n > 0) {
         banner[n] = 0;
         fputs(banner, stdout);
         fflush(stdout);
     }
 
-    // lê uma linha do stdin e envia ao servidor
-    char buf[MAXLINE];
-    fgets(buf, MAXLINE, stdin);
-    write(sockfd, buf, MAXLINE);
-
-    close(sockfd);
+    Close(sockfd);
     return 0;
 }
