@@ -111,6 +111,7 @@ int GetPeerName(int fd, struct sockaddr *addr, socklen_t len){
 }
 
 typedef void Sigfunc(int);
+//Função wrapper que trata os sinais, recebe o codigo do sinal + função tratadora
 Sigfunc * Signal (int signo, Sigfunc *func) {
     struct sigaction act, oact;
     act.sa_handler = func;
@@ -129,6 +130,17 @@ Sigfunc * Signal (int signo, Sigfunc *func) {
         return (SIG_ERR);
     return (oact.sa_handler);
  }
+
+ //Função tratadora do SIGCHLD
+ void sigchld_handler(int sig) {
+    (void)sig; // Ignora o argumento, pois só usaremos para tratar o SIGCHLD
+    int saved_errno = errno; // salva o num erro para não sobrescrever em caso de falha do waitpid
+
+    // Limpa os zombies
+    while (waitpid(-1, NULL, 1) > 0);
+
+    errno = saved_errno;
+}
 
 int main(int argc, char *argv[]) {
 
@@ -177,8 +189,13 @@ int main(int argc, char *argv[]) {
     for (;;) {
         // Aceita conexões de forma concorrente criando processos filhos
         connfd = Accept(listenfd, NULL, NULL);
-        
         GetPeerName(connfd, (struct sockaddr *) &checkadr, sizeof(checkadr));
+
+        //Trata SIGCHILD eliminando zombies
+        if (Signal(SIGCHLD, sigchld_handler) == SIG_ERR) {
+            perror("Signal error");
+            exit(EXIT_FAILURE);
+        }
         
         char ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &checkadr.sin_addr, ip_str, INET_ADDRSTRLEN); //converte o adr recuperado por getsockname ao formato de chars e guarda em ip_str 
