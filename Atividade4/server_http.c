@@ -165,10 +165,10 @@ int main(int argc, char *argv[]) {
     servaddr.sin_family      = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); 
     
-    // Escolhe porta aleatória entre 1 e 65535 caso o parametro 'porta' for 0, senão a porta de conexão é a definida no argumento
+    // Escolhe porta aleatória entre 1024 e 65535 caso o parametro 'porta' for 0, senão a porta de conexão é a definida no argumento
     if(porta == 0){        
         srand(time(NULL));
-        servaddr.sin_port = htons(rand() % 65535 + 1);              
+        servaddr.sin_port = htons(rand() % 64512 + 1024);     
     }
     else
         servaddr.sin_port = htons(porta);
