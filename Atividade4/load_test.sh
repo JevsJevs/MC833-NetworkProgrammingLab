@@ -1,19 +1,19 @@
 #!/bin/bash
 
-PORTA=0
-TEMPO_SLEEP=5
+export PORTA=0
+export TEMPO_SLEEP=3
+export BACKLOG=10
 
-for BACKLOG in {0..10}; do
-    echo
-    echo "Creating server with BACKLOG=$BACKLOG"
-    ./server_http $PORTA $BACKLOG $TEMPO_SLEEP > /dev/null &
+echo
+./server_http $PORTA $BACKLOG $TEMPO_SLEEP &
 
-    for i in {1..10}; do
-        echo "Connecting client $i"
-        ./client_http localhost $PORTA > /dev/null &
-    done
-    
-    sleep 3
-done
+seq 10 | xargs -P 10 -I {} bash -c "./client_http localhost $PORTA > /dev/null &"
 
+# for i in {1..10}; do
+#     # echo "Connecting client $i"
+#     ./client_http localhost $PORTA > /dev/null &
+#     sleep 0.05
+# done
+
+# sleep 5
 killall server_http
