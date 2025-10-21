@@ -3,3 +3,10 @@ Atividade2/servidor
 Atividade2/cliente
 Atividade3/server_http
 Atividade3/client_http
+Atividade4/server_http
+Atividade4/client_http
+
+*.info
+.vscode
+
+MC833*.pdf
