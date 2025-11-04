@@ -247,11 +247,11 @@ int main(int argc, char *argv[]) {
                 printf("Limite de clientes atingido.\n");
                 close(newfd);
             }
-            // else {
-            //     FD_SET(newfd, &master_set);
-            //     if (newfd > maxfd)
-            //         maxfd = newfd;
-            // }
+            else {
+                FD_SET(newfd, &master_set); //-> Se não estiver cheio coloca o bit indicando prontidao para ler o cliente
+                if (newfd > maxfd)
+                    maxfd = newfd;
+            }
         }
         
         for (int i = 0; i < MAX_CLIENTS; i++) {
@@ -296,7 +296,7 @@ int main(int argc, char *argv[]) {
                 (void) Write(fd, response, strlen(response));
                 sleep(tempoSleep);
 
-                // close(fd);
+                Close(fd);
                 FD_CLR(fd, &master_set);
                 client_sockets[i] = -1;
             }
