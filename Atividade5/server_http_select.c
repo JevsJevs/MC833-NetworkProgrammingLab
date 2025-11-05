@@ -236,7 +236,7 @@ int main(int argc, char *argv[]) {
             int i;
             for (i = 0; i < MAX_CLIENTS; i++) {
                 if (client_sockets[i] == -1) {
-                    printf("Cliente recebido fd: %d", newfd);
+                    printf("Cliente recebido fd: %d\n", newfd);
                     client_sockets[i] = newfd;
                     break;
                 }

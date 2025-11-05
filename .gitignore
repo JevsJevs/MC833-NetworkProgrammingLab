@@ -5,6 +5,11 @@ Atividade3/server_http
 Atividade3/client_http
 Atividade4/server_http
 Atividade4/client_http
+Atividade5/server_http_poll
+Atividade5/server_http_select
+Atividade5/client_http_poll
+Atividade5/client_http_select
+
 
 *.info
 .vscode
